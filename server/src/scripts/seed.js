@@ -8,6 +8,20 @@ import { applySchema } from './schema.js';
 import { os, ensureIndex, reindexAll } from '../search.js';
 import { config } from '../config.js';
 
+// This script DELETES every table's data. Only allow it on a local database,
+// or when someone explicitly passes --wipe-everything.
+const local = /@(localhost|127\.0\.0\.1)(:\d+)?\//.test(config.pg.connectionString);
+if (!local && !process.argv.includes('--wipe-everything')) {
+  console.error('Refusing to seed: DATABASE_URL is not a local database.');
+  console.error('Seeding deletes ALL shops, products, users and orders. It is for local development only.');
+  console.error('If you really mean it: npm run seed -- --wipe-everything');
+  process.exit(1);
+}
+if (config.isProduction) {
+  console.error('Refusing to seed with NODE_ENV=production.');
+  process.exit(1);
+}
+
 export const DEMO_CENTER = { lat: 12.9352, lng: 77.6245 };
 const PASSWORD = 'demo1234';
 

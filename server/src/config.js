@@ -9,19 +9,38 @@ const rootDir = path.resolve(here, '..', '..');
 // .env lives at the repo root so client and server share one file.
 dotenv.config({ path: path.join(rootDir, '.env') });
 
-/** Read a file path from an env var (relative paths resolve from the repo root). */
+/**
+ * A certificate from an env var: either the PEM text itself (handy on hosting
+ * platforms where you can't upload files) or a path to a file.
+ * Literal "\n" sequences are turned into newlines, since some dashboards
+ * only accept single-line values.
+ */
 function readFileEnv(name) {
-  const p = process.env[name];
-  if (!p) return undefined;
-  const full = path.isAbsolute(p) ? p : path.join(rootDir, p);
+  const v = process.env[name];
+  if (!v) return undefined;
+  if (v.includes('-----BEGIN')) return v.replace(/\\n/g, '\n');
+  const full = path.isAbsolute(v) ? v : path.join(rootDir, v);
   return fs.readFileSync(full, 'utf8');
 }
 
 const num = (v, d) => (v === undefined || v === '' ? d : Number(v));
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+const jwtSecret = process.env.JWT_SECRET;
+if (isProduction && (!jwtSecret || jwtSecret.length < 32 || /change-me/.test(jwtSecret))) {
+  throw new Error('JWT_SECRET must be set to a random string of at least 32 characters in production.');
+}
+
 export const config = {
+  isProduction,
   port: num(process.env.PORT, 4000),
-  jwtSecret: process.env.JWT_SECRET || 'dev-only-secret-change-me',
+  jwtSecret: jwtSecret || 'dev-only-secret-not-for-production',
+  // Public URL of the site, e.g. https://dailycart.onrender.com. Locks CORS to it.
+  appOrigin: process.env.APP_ORIGIN || '',
+  timezone: process.env.APP_TIMEZONE || 'Asia/Kolkata',
+  // Customers whose freezes expire this many times in a week can't freeze for a day.
+  noShowLimit: num(process.env.NO_SHOW_LIMIT, 3),
 
   freeze: {
     minutes: num(process.env.FREEZE_MINUTES, 30),
