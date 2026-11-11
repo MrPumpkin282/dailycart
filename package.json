@@ -1,0 +1,19 @@
+{
+  "name": "dailycart",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Reserve fresh items at nearby shops, pick up and pay in store.",
+  "scripts": {
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "services:up": "docker compose up -d",
+    "services:down": "docker compose down",
+    "seed": "npm --prefix server run seed",
+    "reindex": "npm --prefix server run reindex",
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix server start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
