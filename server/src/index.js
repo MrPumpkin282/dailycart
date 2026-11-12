@@ -15,6 +15,8 @@ import { applySchema } from './scripts/schema.js';
 
 const app = express();
 app.use(cors());
+// Photo uploads need a bigger body than normal requests.
+app.use('/api/shop/images', express.json({ limit: '1mb' }));
 app.use(express.json({ limit: '100kb' }));
 app.use('/api', routes);
 

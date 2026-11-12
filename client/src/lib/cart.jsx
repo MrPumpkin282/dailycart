@@ -25,7 +25,7 @@ export function CartProvider({ children }) {
       if (qty <= 0) delete group.items[product.id];
       else group.items[product.id] = {
         id: product.id, name: product.name, unit: product.unit, price: product.price,
-        category: product.category, stock: product.stock, qty: Math.min(qty, product.stock, 5),
+        category: product.category, stock: product.stock, image_id: product.image_id ?? null, qty: Math.min(qty, product.stock, 5),
       };
       if (Object.keys(group.items).length) next[shop.id] = group;
       else delete next[shop.id];

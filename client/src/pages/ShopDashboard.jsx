@@ -2,14 +2,63 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, rupees, CATEGORY_EMOJI, expiryLabel } from '../lib/api.js';
 import { useToast } from '../components/Toast.jsx';
 import Countdown from '../components/Countdown.jsx';
+import ProductImage, { imageUrl, shrinkImage } from '../components/ProductImage.jsx';
 import { PlusIcon, MinusIcon, SnowIcon, CheckIcon, BoltIcon, XIcon, BellIcon } from '../components/icons.jsx';
 
 const CATEGORIES = ['Dairy', 'Bakery', 'Snacks', 'Fruits & Veg', 'Beverages', 'Ready to eat', 'Other'];
-const EMPTY = { name: '', brand: '', category: 'Dairy', unit: '', price: '', stock: '', expires_on: '' };
+const EMPTY = { name: '', brand: '', category: 'Dairy', unit: '', price: '', stock: '', expires_on: '', image_id: null };
+
+/** "Add photo" picker: camera or gallery, preview, shrinks before upload. */
+function PhotoPicker({ imageId, onChange, category }) {
+  const [preview, setPreview] = useState(imageUrl(imageId));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const pick = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setError('');
+    setBusy(true);
+    try {
+      const data = await shrinkImage(file);
+      setPreview(data);
+      const { id } = await api('/shop/images', { method: 'POST', body: { data } });
+      onChange(id);
+    } catch (err) {
+      setError(err.message);
+      setPreview(imageUrl(imageId));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="sm:col-span-2">
+      <span className="label">Product photo</span>
+      <div className="flex items-center gap-4">
+        <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-xl border border-cream-line bg-cream text-4xl">
+          {preview ? <img src={preview} alt="" className="h-full w-full object-contain" /> : <span aria-hidden="true">{CATEGORY_EMOJI[category]}</span>}
+        </div>
+        <div className="space-y-2">
+          <label className={`btn-outline cursor-pointer px-3 py-1.5 text-xs ${busy ? 'pointer-events-none opacity-60' : ''}`}>
+            {busy ? 'Uploading…' : preview ? 'Change photo' : 'Add photo'}
+            <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={pick} className="sr-only" />
+          </label>
+          {preview && !busy && (
+            <button type="button" onClick={() => { setPreview(null); onChange(null); }} className="block text-xs font-semibold text-ink-faint hover:text-maroon-600">Remove photo</button>
+          )}
+          <p className="text-[11px] text-ink-faint">A clear photo of the pack, front-facing. JPG, PNG or WebP.</p>
+        </div>
+      </div>
+      {error && <p className="mt-2 text-xs text-maroon-600">{error}</p>}
+    </div>
+  );
+}
 
 function Stat({ label, value, tone }) {
   return (
-    <div className={`rounded-3xl p-5 ${tone}`}>
+    <div className={`rounded-2xl p-5 ${tone}`}>
       <p className="text-xs font-semibold uppercase tracking-wide opacity-70">{label}</p>
       <p className="mt-1 text-3xl font-extrabold">{value}</p>
     </div>
@@ -38,12 +87,13 @@ function ProductForm({ initial, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="card w-full max-w-lg rounded-b-none p-6 sm:rounded-3xl">
+      <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="card max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-b-none p-6 sm:rounded-2xl">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-extrabold">{initial ? 'Edit item' : 'Add an item'}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-xl p-2 hover:bg-canvas"><XIcon /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-xl p-2 hover:bg-cream"><XIcon /></button>
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <PhotoPicker imageId={form.image_id} category={form.category} onChange={(id) => setForm((f) => ({ ...f, image_id: id }))} />
           <label className="sm:col-span-2"><span className="label">Item name</span><input className="input" value={form.name} onChange={set('name')} required placeholder="Toned Milk" /></label>
           <label><span className="label">Brand</span><input className="input" value={form.brand || ''} onChange={set('brand')} placeholder="Nandini" /></label>
           <label><span className="label">Pack size</span><input className="input" value={form.unit} onChange={set('unit')} placeholder="500 ml" /></label>
@@ -74,14 +124,14 @@ function EventFeed() {
 
   return (
     <section className="card p-5">
-      <h2 className="flex items-center gap-2 font-bold"><BoltIcon className="h-5 w-5 text-brand-500" />Live event stream</h2>
+      <h2 className="flex items-center gap-2 font-bold"><BoltIcon className="h-5 w-5 text-maroon-600" />Live event stream</h2>
       <p className="text-xs text-ink-soft">Kafka events handled by the consumers</p>
       <ul className="mt-4 max-h-96 space-y-2 overflow-y-auto pr-1">
         {events.length === 0 && <li className="text-sm text-ink-faint">No events yet. Freeze something as a customer.</li>}
         {events.map((e) => (
-          <li key={e.id} className="rounded-2xl bg-canvas p-3 text-xs">
+          <li key={e.id} className="rounded-2xl bg-cream p-3 text-xs">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono font-bold text-brand-600">{e.event_type}</span>
+              <span className="font-mono font-bold text-maroon-600">{e.event_type}</span>
               <span className="text-ink-faint">{new Date(e.processed_at).toLocaleTimeString('en-IN')}</span>
             </div>
             <p className="mt-1 text-ink-soft"><span className="font-semibold text-ink">{e.consumer}</span> → {e.result}</p>
@@ -154,7 +204,7 @@ export default function ShopDashboard() {
   };
 
   if (error) return <main className="mx-auto max-w-6xl px-4 py-10"><p className="card p-6 text-red-600">{error}</p></main>;
-  if (!data) return <main className="mx-auto max-w-6xl px-4 py-10"><div className="h-40 animate-pulse rounded-3xl bg-white" /></main>;
+  if (!data) return <main className="mx-auto max-w-6xl px-4 py-10"><div className="h-40 animate-pulse rounded-2xl bg-white" /></main>;
 
   const { shop, products, stats } = data;
   const active = freezes.filter((f) => f.status === 'active');
@@ -172,9 +222,9 @@ export default function ShopDashboard() {
       </header>
 
       <section className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Waiting for pickup" value={stats.active} tone="bg-brand-500 text-white" />
-        <Stat label="Collected today" value={stats.collected_today} tone="bg-mint-50 text-mint-700" />
-        <Stat label="Sales today" value={rupees(stats.sales_today)} tone="bg-peach-50 text-peach-700" />
+        <Stat label="Waiting for pickup" value={stats.active} tone="bg-maroon-600 text-white" />
+        <Stat label="Collected today" value={stats.collected_today} tone="bg-leaf-50 text-leaf-600" />
+        <Stat label="Sales today" value={rupees(stats.sales_today)} tone="bg-saffron-50 text-maroon-700" />
         <Stat label="Items listed" value={products.filter((p) => p.active).length} tone="bg-white text-ink shadow-card" />
       </section>
 
@@ -183,20 +233,20 @@ export default function ShopDashboard() {
           {/* Pickups */}
           <section className="card p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-lg font-extrabold"><SnowIcon className="h-5 w-5 text-brand-500" />Pickups</h2>
+              <h2 className="flex items-center gap-2 text-lg font-extrabold"><SnowIcon className="h-5 w-5 text-maroon-600" />Pickups</h2>
               <form onSubmit={(e) => { e.preventDefault(); if (code.trim()) collect({ code: code.trim() }); }} className="flex gap-2">
                 <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="DC-XXXXX" className="input w-36 py-2 font-mono uppercase" aria-label="Pickup code" />
-                <button className="btn bg-ink px-4 py-2 text-white">Collect</button>
+                <button className="btn bg-maroon-600 px-4 py-2 text-white">Collect</button>
               </form>
             </div>
             {active.length === 0 ? (
-              <p className="mt-4 rounded-2xl bg-canvas p-6 text-center text-sm text-ink-soft">No one is on their way right now.</p>
+              <p className="mt-4 rounded-2xl bg-cream p-6 text-center text-sm text-ink-soft">No one is on their way right now.</p>
             ) : (
               <ul className="mt-4 grid gap-3 sm:grid-cols-2">
                 {active.map((f) => (
-                  <li key={f.id} className="rounded-2xl p-4 ring-1 ring-brand-200">
+                  <li key={f.id} className="rounded-2xl p-4 ring-1 ring-saffron-300">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-lg font-extrabold text-brand-700">{f.code}</span>
+                      <span className="font-mono text-lg font-extrabold text-maroon-700">{f.code}</span>
                       <span className="text-xs text-ink-soft">⏱ <Countdown until={f.expires_at} onDone={load} /></span>
                     </div>
                     <p className="text-sm font-semibold">{f.customer_name}{f.customer_phone && <span className="font-normal text-ink-soft"> · {f.customer_phone}</span>}</p>
@@ -205,7 +255,7 @@ export default function ShopDashboard() {
                     </ul>
                     <div className="mt-3 flex items-center justify-between">
                       <span className="font-extrabold">{rupees(f.total)}</span>
-                      <button onClick={() => collect({ id: f.id })} className="btn bg-mint-500 px-3 py-2 text-white hover:bg-mint-700"><CheckIcon className="h-4 w-4" />Paid &amp; collected</button>
+                      <button onClick={() => collect({ id: f.id })} className="btn bg-leaf-500 px-3 py-2 text-white hover:bg-leaf-600/90"><CheckIcon className="h-4 w-4" />Paid &amp; collected</button>
                     </div>
                   </li>
                 ))}
@@ -235,22 +285,22 @@ export default function ShopDashboard() {
                 const exp = expiryLabel(p.expires_on);
                 return (
                   <li key={p.id} className={`flex flex-wrap items-center gap-3 py-3 ${p.active ? '' : 'opacity-50'}`}>
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-canvas text-xl">{CATEGORY_EMOJI[p.category]}</span>
+                    <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-cream"><ProductImage product={p} emojiSize="text-xl" /></span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold">{p.name} <span className="text-xs font-normal text-ink-faint">{p.unit}</span></p>
                       <div className="mt-0.5 flex flex-wrap gap-1.5 text-[11px] font-semibold">
                         <span className="text-ink-soft">{rupees(p.price)}</span>
                         {exp && <span className={`rounded-full px-2 ${exp.tone}`}>{exp.text}</span>}
-                        {p.frozen > 0 && <span className="rounded-full bg-brand-50 px-2 text-brand-600">{p.frozen} frozen</span>}
+                        {p.frozen > 0 && <span className="rounded-full bg-saffron-50 px-2 text-maroon-600">{p.frozen} frozen</span>}
                         {!p.active && <span className="rounded-full bg-slate-100 px-2">hidden</span>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 rounded-2xl bg-canvas p-1">
+                    <div className="flex items-center gap-1 rounded-2xl bg-cream p-1">
                       <button onClick={() => bump(p, -1)} disabled={p.stock === 0} aria-label={`One less ${p.name}`} className="grid h-8 w-8 place-items-center rounded-xl bg-white disabled:opacity-40"><MinusIcon className="h-4 w-4" /></button>
                       <span className={`w-8 text-center font-bold ${p.stock === 0 ? 'text-red-600' : ''}`}>{p.stock}</span>
                       <button onClick={() => bump(p, 1)} aria-label={`One more ${p.name}`} className="grid h-8 w-8 place-items-center rounded-xl bg-white"><PlusIcon className="h-4 w-4" /></button>
                     </div>
-                    <button onClick={() => setEditing(p)} className="rounded-xl px-3 py-2 text-xs font-semibold text-brand-600 hover:bg-brand-50">Edit</button>
+                    <button onClick={() => setEditing(p)} className="rounded-xl px-3 py-2 text-xs font-semibold text-maroon-600 hover:bg-saffron-50">Edit</button>
                     <button onClick={() => remove(p)} className="rounded-xl px-3 py-2 text-xs font-semibold text-ink-faint hover:bg-red-50 hover:text-red-600">Remove</button>
                   </li>
                 );
@@ -262,7 +312,7 @@ export default function ShopDashboard() {
         <aside className="space-y-6">
           {notes.length > 0 && (
             <section className="card p-5">
-              <h2 className="flex items-center gap-2 font-bold"><BellIcon className="h-5 w-5 text-peach-500" />Alerts</h2>
+              <h2 className="flex items-center gap-2 font-bold"><BellIcon className="h-5 w-5 text-saffron-600" />Alerts</h2>
               <ul className="mt-3 space-y-3 text-sm">
                 {notes.slice(0, 5).map((n) => <li key={n.id}>{n.message}</li>)}
               </ul>

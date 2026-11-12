@@ -1,27 +1,32 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api, metres, walkMins, CATEGORY_EMOJI } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import { useLocation2 } from '../lib/location.jsx';
 import LocationGate from '../components/LocationGate.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import RadiusToggle from '../components/RadiusToggle.jsx';
-import { SearchIcon, StoreIcon, ClockIcon, WalkIcon, PinIcon } from '../components/icons.jsx';
+import { Mascot } from '../components/Brand.jsx';
 
-const CATS = ['Dairy', 'Bakery', 'Fruits & Veg', 'Snacks', 'Beverages', 'Ready to eat'];
+const CATS = ['Dairy', 'Bakery', 'Fruits & Veg', 'Snacks', 'Beverages', 'Ready to eat', 'Other'];
 
-function greeting() {
-  const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+function SectionHead({ title, sub, action }) {
+  return (
+    <div className="mb-3 flex items-end justify-between gap-3">
+      <div>
+        <h2 className="section-title">{title}</h2>
+        {sub && <p className="text-xs text-ink-soft">{sub}</p>}
+      </div>
+      {action}
+    </div>
+  );
 }
 
 function HomeInner() {
   const { user } = useAuth();
-  const { loc, radius, setLoc } = useLocation2();
-  const nav = useNavigate();
-  const [q, setQ] = useState('');
+  const { loc, radius } = useLocation2();
   const [shops, setShops] = useState(null);
-  const [expiring, setExpiring] = useState(null);
+  const [items, setItems] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -29,124 +34,120 @@ function HomeInner() {
     setError('');
     api('/shops/nearby', { params }).then(setShops).catch((e) => setError(e.message));
     api('/search', { params: { ...params, sort: 'expiry' } })
-      .then((r) => setExpiring(r.hits.filter((h) => h.stock > 0).slice(0, 10)))
-      .catch(() => setExpiring([]));
+      .then((r) => setItems(r.hits.filter((h) => h.stock > 0).slice(0, 12)))
+      .catch(() => setItems([]));
   }, [loc.lat, loc.lng, radius]);
 
-  const submit = (e) => {
-    e.preventDefault();
-    nav(`/search?q=${encodeURIComponent(q.trim())}`);
-  };
-
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:pb-16">
+    <main className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:pb-6">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold">Namaste{user ? `, ${user.name.split(' ')[0]}` : ''}</h1>
+          <p className="text-sm text-ink-soft">
+            {shops ? `${shops.length} neighbourhood shop${shops.length === 1 ? '' : 's'} within ${radius} m of ${loc.label}` : 'Finding shops near you…'}
+          </p>
+        </div>
+      </div>
+
       {/* Hero */}
-      <section className="card relative overflow-hidden bg-brand-500 p-6 text-white sm:p-10">
-        <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-white/10" aria-hidden="true" />
-        <div className="absolute -bottom-24 right-32 h-56 w-56 rounded-full bg-white/10" aria-hidden="true" />
-        <div className="relative">
-          <p className="text-sm font-medium text-white/80">{greeting()}{user ? `, ${user.name.split(' ')[0]}` : ''} 👋</p>
-          <h1 className="mt-1 max-w-xl text-2xl font-extrabold leading-tight sm:text-4xl">What do you need from the corner shop today?</h1>
-          <form onSubmit={submit} className="mt-6 flex max-w-xl items-center gap-2 rounded-2xl bg-white p-1.5 shadow-lg">
-            <SearchIcon className="ml-3 h-5 w-5 text-ink-faint" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Try “milk”, “bred”, “samosa”…"
-              className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
-              aria-label="Search products"
-            />
-            <button className="btn-primary px-5 py-2.5 shadow-none">Search</button>
-          </form>
-          <button onClick={() => setLoc(null)} className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-white/80 hover:text-white md:hidden">
-            <PinIcon className="h-4 w-4" />{loc.label} · change
-          </button>
+      <section className="mt-5 grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <div className="relative flex overflow-hidden rounded-2xl bg-saffron-400">
+          <div className="relative z-10 p-6 sm:p-8">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-maroon-700">Fresh from your lane</p>
+            <h2 className="mt-2 text-2xl font-extrabold leading-tight text-maroon-600 sm:text-3xl">Ghar ki zarooratein.<br />Bas, Dailykart se.</h2>
+            <p className="mt-2 max-w-xs text-sm text-ink/80">Milk, bread, sabzi and snacks from shops you already trust.</p>
+            <Link to="/search" className="btn-primary mt-5">Start your daily basket →</Link>
+          </div>
+          <div className="dots ml-auto hidden items-end pr-6 sm:flex"><Mascot className="h-48" /></div>
+        </div>
+        <div className="flex flex-col justify-between rounded-2xl bg-maroon-600 p-6 text-white">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-saffron-300">How it works</p>
+            <h3 className="mt-2 text-xl font-bold">Reserve now.<br />Pay at the shop.</h3>
+            <p className="mt-2 text-sm text-white/80">We hold your items for 30 minutes. No online payment, no delivery fee.</p>
+          </div>
+          <Link to="/cart" className="mt-4 rounded-lg bg-white px-4 py-2.5 text-center text-sm font-semibold text-maroon-600 hover:bg-cream">View my basket</Link>
         </div>
       </section>
+
+      {error && <p className="card mt-6 p-4 text-sm text-maroon-600">{error}</p>}
 
       {/* Categories */}
-      <section className="no-scrollbar -mx-4 mt-6 flex gap-2 overflow-x-auto px-4">
-        {CATS.map((c) => (
-          <Link key={c} to={`/search?category=${encodeURIComponent(c)}`} className="chip bg-white hover:bg-brand-50">
-            <span aria-hidden="true">{CATEGORY_EMOJI[c]}</span>{c}
-          </Link>
-        ))}
+      <section className="mt-8">
+        <SectionHead title="What's on your list today?" sub="Shop by category" action={<Link to="/search" className="link text-sm">Shop all →</Link>} />
+        <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-7 sm:px-0">
+          {CATS.map((c) => (
+            <Link key={c} to={`/search?category=${encodeURIComponent(c)}`} className="flex w-24 shrink-0 flex-col items-center gap-2 rounded-xl border border-cream-line bg-white p-3 text-center hover:border-saffron-400 sm:w-auto">
+              <span className="grid h-14 w-14 place-items-center rounded-lg bg-cream text-3xl" aria-hidden="true">{CATEGORY_EMOJI[c]}</span>
+              <span className="text-xs font-semibold">{c}</span>
+            </Link>
+          ))}
+        </div>
       </section>
 
-      {error && <p className="card mt-6 p-5 text-sm text-red-600">{error}</p>}
-
-      {/* Expiring soon */}
-      <section className="mt-10">
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-xl font-extrabold"><ClockIcon className="h-5 w-5 text-peach-500" />Grab it before it's gone</h2>
-            <p className="text-sm text-ink-soft">Fresh items nearby with the shortest shelf life</p>
-          </div>
-          <Link to="/search?sort=expiry" className="shrink-0 text-sm font-semibold text-brand-600 hover:underline">See all</Link>
-        </div>
-        {expiring === null ? (
-          <SkeletonRow />
-        ) : expiring.length === 0 ? (
+      {/* Products */}
+      <section className="mt-8">
+        <SectionHead title="Everyday favourites" sub="Freshest first: grab these before they're gone" action={<Link to="/search?sort=expiry" className="link text-sm">View all →</Link>} />
+        {items === null ? (
+          <Skeleton />
+        ) : items.length === 0 ? (
           <p className="card p-6 text-sm text-ink-soft">Nothing listed within {radius} m yet.</p>
         ) : (
-          <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-2">
-            {expiring.map((p) => (
-              <div key={p.id} className="w-44 shrink-0 sm:w-52">
-                <ProductCard product={p} shop={{ id: p.shop_id, name: p.shop_name, distance_m: p.distance_m }} showShop />
-              </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+            {items.map((p) => (
+              <ProductCard key={p.id} product={p} shop={{ id: p.shop_id, name: p.shop_name, distance_m: p.distance_m }} showShop />
             ))}
           </div>
         )}
       </section>
 
       {/* Shops */}
-      <section className="mt-10">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-xl font-extrabold"><StoreIcon className="h-5 w-5 text-brand-500" />Shops within {radius} m</h2>
-            <p className="text-sm text-ink-soft">Only stores you can walk to are shown</p>
-          </div>
-          <RadiusToggle />
-        </div>
+      <section className="mt-8">
+        <SectionHead title="Your neighbourhood, online" sub="Shops you can walk to" action={<RadiusToggle />} />
         {shops === null ? (
-          <SkeletonRow />
+          <Skeleton />
         ) : shops.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-3xl">🏪</p>
-            <p className="mt-2 font-semibold">No DailyCart shops within {radius} m</p>
-            <p className="mt-1 text-sm text-ink-soft">Try the demo area to explore the app.</p>
+            <p className="mt-2 font-semibold">No Dailykart shops within {radius} m yet</p>
+            <p className="mt-1 text-sm text-ink-soft">Know a shop nearby? Ask them to <Link to="/shop/login?register=1" className="link">list their dukaan</Link>.</p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {shops.map((s) => (
-              <Link key={s.id} to={`/shops/${s.id}`} className="card group flex gap-4 p-4 transition hover:-translate-y-0.5 hover:shadow-lift">
-                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-brand-50 text-2xl">🏪</div>
+              <Link key={s.id} to={`/shops/${s.id}`} className="flex gap-3 rounded-xl border border-cream-line bg-white p-3 hover:border-saffron-400">
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-saffron-50 text-2xl">🏪</div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate font-bold group-hover:text-brand-600">{s.name}</h3>
+                  <h3 className="truncate font-semibold">{s.name}</h3>
                   <p className="truncate text-xs text-ink-soft">{s.address}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-mint-50 px-2 py-0.5 font-semibold text-mint-700">
-                      <WalkIcon className="h-3.5 w-3.5" />{metres(s.distance_m)} · {walkMins(s.distance_m)} min
-                    </span>
-                    <span className="rounded-full bg-canvas px-2 py-0.5 font-medium text-ink-soft">{s.in_stock} in stock</span>
-                  </div>
-                  <p className="mt-2 text-sm" aria-label="Categories">
-                    {(s.categories || []).map((c) => <span key={c} title={c} className="mr-1">{CATEGORY_EMOJI[c]}</span>)}
+                  <p className="mt-1 text-xs">
+                    <span className="font-semibold text-leaf-600">{metres(s.distance_m)} · {walkMins(s.distance_m)} min walk</span>
+                    <span className="text-ink-faint"> · {s.in_stock} in stock</span>
                   </p>
                 </div>
+                <span className="self-center text-maroon-600" aria-hidden="true">›</span>
               </Link>
             ))}
           </div>
         )}
       </section>
+
+      {/* CTA */}
+      <section className="mt-10 flex flex-col items-start justify-between gap-4 rounded-2xl border border-cream-line bg-cream-deep p-6 sm:flex-row sm:items-center">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-maroon-600">Pick up on your walk</p>
+          <h3 className="mt-1 text-xl font-bold">Your daily needs. One less thing to remember.</h3>
+        </div>
+        <Link to="/search" className="btn-primary shrink-0">Explore nearby shops →</Link>
+      </section>
     </main>
   );
 }
 
-function SkeletonRow() {
+function Skeleton() {
   return (
-    <div className="flex gap-4 overflow-hidden">
-      {[0, 1, 2, 3].map((i) => <div key={i} className="h-56 w-48 shrink-0 animate-pulse rounded-3xl bg-white" />)}
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+      {[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-52 animate-pulse rounded-xl bg-white" />)}
     </div>
   );
 }

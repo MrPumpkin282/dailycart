@@ -55,7 +55,7 @@ function SearchInner() {
   return (
     <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:pb-16">
       <div className="card p-4 sm:p-5">
-        <div className="flex items-center gap-2 rounded-2xl bg-canvas px-3 ring-1 ring-black/5 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-400">
+        <div className="flex items-center gap-2 rounded-2xl bg-cream px-3 ring-1 ring-black/5 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-400">
           <SearchIcon className="h-5 w-5 text-ink-faint" />
           <input
             autoFocus
@@ -85,12 +85,12 @@ function SearchInner() {
 
       {/* Category facets come from an OpenSearch aggregation */}
       <div className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4">
-        <button onClick={() => update({ category: '' })} className={`chip ${!category ? 'bg-ink text-white' : 'bg-white hover:bg-brand-50'}`}>All</button>
+        <button onClick={() => update({ category: '' })} className={`chip ${!category ? 'border-maroon-600 bg-maroon-600 text-white' : 'bg-white hover:bg-saffron-50'}`}>All</button>
         {(data?.categories || []).map((c) => (
           <button
             key={c.name}
             onClick={() => update({ category: category === c.name ? '' : c.name })}
-            className={`chip ${category === c.name ? 'bg-ink text-white' : 'bg-white hover:bg-brand-50'}`}
+            className={`chip ${category === c.name ? 'border-maroon-600 bg-maroon-600 text-white' : 'bg-white hover:bg-saffron-50'}`}
           >
             {CATEGORY_EMOJI[c.name]} {c.name} <span className="opacity-60">{c.count}</span>
           </button>
@@ -103,7 +103,7 @@ function SearchInner() {
           {q && <span className="font-normal text-ink-soft"> for “{q}”</span>}
         </p>
         {data && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-mint-50 px-3 py-1 text-xs font-semibold text-mint-700" title="Results served by OpenSearch">
+          <span className="inline-flex items-center gap-1 rounded-full bg-leaf-50 px-3 py-1 text-xs font-semibold text-leaf-600" title="Results served by OpenSearch">
             <BoltIcon className="h-3.5 w-3.5" /> OpenSearch · {data.took_ms} ms
           </span>
         )}

@@ -29,6 +29,7 @@ const MAPPINGS = {
     city: { type: 'keyword' },
     location: { type: 'geo_point' },
     updated_at: { type: 'date' },
+    image_id: { type: 'integer', index: false },
   },
 };
 
@@ -37,12 +38,16 @@ export async function ensureIndex() {
   if (!exists.body) {
     await os.indices.create({ index: INDEX, body: { mappings: MAPPINGS } });
     console.log(`[opensearch] created index ${INDEX}`);
+  } else {
+    // Add any fields introduced since the index was created (adding fields is allowed in place).
+    await os.indices.putMapping({ index: INDEX, body: { properties: { image_id: MAPPINGS.properties.image_id } } })
+      .catch((e) => console.warn('[opensearch] mapping update skipped:', e.message));
   }
 }
 
 const PRODUCT_SQL = `
   SELECT p.id, p.name, p.brand, p.category, p.unit, p.price, p.stock, p.expires_on,
-         p.active, p.updated_at, s.id AS shop_id, s.name AS shop_name, s.city, s.lat, s.lng
+         p.active, p.updated_at, p.image_id, s.id AS shop_id, s.name AS shop_name, s.city, s.lat, s.lng
   FROM products p JOIN shops s ON s.id = p.shop_id`;
 
 function toDoc(r) {
@@ -61,6 +66,7 @@ function toDoc(r) {
     city: r.city,
     location: { lat: r.lat, lon: r.lng },
     updated_at: r.updated_at,
+    image_id: r.image_id,
   };
 }
 

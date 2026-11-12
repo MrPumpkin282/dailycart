@@ -72,6 +72,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications(user_id, created_at DESC);
 
+-- Product photos uploaded by shopkeepers (shrunk to ~100 KB in the browser first).
+CREATE TABLE IF NOT EXISTS product_images (
+  id         SERIAL PRIMARY KEY,
+  shop_id    INT NOT NULL REFERENCES shops(id) ON DELETE CASCADE,
+  mime       TEXT NOT NULL CHECK (mime IN ('image/jpeg', 'image/png', 'image/webp')),
+  data       BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS image_id INT REFERENCES product_images(id) ON DELETE SET NULL;
+
 -- Every event a Kafka consumer handled, as proof for the demo.
 CREATE TABLE IF NOT EXISTS event_log (
   id           SERIAL PRIMARY KEY,
