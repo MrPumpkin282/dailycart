@@ -47,7 +47,7 @@ Requires Node 20+ and Docker Desktop.
 npm run install:all
 npm run services:up     # Postgres (port 5433), Kafka (9092), OpenSearch (9200) in Docker
 npm run seed            # demo shops and products, also builds the search index
-npm run dev             # API on :4000, web app on http://localhost:5173
+npm run dev           # API on :4000, web app on http://localhost:5173
 ```
 
 Production-style: `npm run build && npm start`, then open http://localhost:4000.
