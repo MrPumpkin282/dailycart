@@ -22,7 +22,7 @@ app.use('/api', routes);
 
 // Serve the built React app in production (npm run build in client/).
 const clientDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'dist');
-if (fs.existsSync(clientDist)) {
+if (!process.env.VERCEL && fs.existsSync(clientDist)) {
   app.use(express.static(clientDist));
   app.get(/^\/(?!api).*/, (req, res) => res.sendFile(path.join(clientDist, 'index.html')));
 }
