@@ -20,6 +20,10 @@ function readFileEnv(name) {
   if (!v) return undefined;
   if (v.includes('-----BEGIN')) return v.replace(/\\n/g, '\n');
   const full = path.isAbsolute(v) ? v : path.join(rootDir, v);
+  if (process.env.VERCEL && !fs.existsSync(full)) {
+    console.warn(`[config] ${name} points to missing file "${v}"; paste the PEM contents into the Vercel environment variable instead.`);
+    return undefined;
+  }
   return fs.readFileSync(full, 'utf8');
 }
 
