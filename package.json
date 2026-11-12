@@ -8,6 +8,7 @@
     "services:up": "docker compose up -d",
     "services:down": "docker compose down",
     "seed": "npm --prefix server run seed",
+    "check": "npm --prefix server run check",
     "reindex": "npm --prefix server run reindex",
     "dev": "concurrently -n api,web -c magenta,cyan \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
     "build": "npm --prefix client run build",

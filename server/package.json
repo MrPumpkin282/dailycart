@@ -8,6 +8,7 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "seed": "node src/scripts/seed.js",
+    "check": "node src/scripts/check.js",
     "reindex": "node src/scripts/reindex.js"
   },
   "dependencies": {

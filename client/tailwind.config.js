@@ -1,29 +1,29 @@
 /** @type {import('tailwindcss').Config} */
+// Colours and fonts taken from the Dailykart Figma file.
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        brand: ['"Yatra One"', 'Inter', 'serif'],
       },
       colors: {
-        ink: { DEFAULT: '#1D1B26', soft: '#5E5B6E', faint: '#9A97A8' },
-        canvas: '#F5F4FA',
-        brand: {
-          50: '#F1EFFE',
-          100: '#E3DFFD',
-          200: '#C9C1FB',
-          400: '#8B7CF6',
-          500: '#6C5CE7',
-          600: '#5847D4',
-          700: '#4636AE',
-        },
-        mint: { 50: '#E9FBF3', 100: '#CFF5E3', 500: '#1FB37A', 700: '#12805A' },
-        peach: { 50: '#FFF3EC', 100: '#FFE3D3', 500: '#FF8A4C', 700: '#C85A1E' },
+        ink: { DEFAULT: '#2A1A15', soft: '#6B5A52', faint: '#A39389' },
+        cream: { DEFAULT: '#FFF7EA', deep: '#FCEFD8', line: '#F1DFC2' },
+        saffron: { 50: '#FFF4E0', 100: '#FFE7BD', 300: '#FDCB75', 400: '#FDBA52', 500: '#F9A93A', 600: '#E58E1E' },
+        maroon: { 50: '#FBEDEB', 100: '#F3D3CF', 500: '#9A2E26', 600: '#8A2620', 700: '#6F1D18' },
+        leaf: { 50: '#EAF6EC', 600: '#2E7D3A' },
+        // legacy names still used in a few places
+        canvas: '#FFF7EA',
+        brand: { 50: '#FBEDEB', 100: '#F3D3CF', 200: '#E9B4AD', 400: '#B3473D', 500: '#9A2E26', 600: '#8A2620', 700: '#6F1D18' },
+        mint: { 50: '#EAF6EC', 100: '#D4EDD8', 500: '#2E7D3A', 700: '#1F5A29' },
+        peach: { 50: '#FFF4E0', 100: '#FFE7BD', 500: '#E58E1E', 700: '#B2650B' },
       },
       boxShadow: {
-        card: '0 1px 2px rgba(29,27,38,0.04), 0 8px 24px -12px rgba(29,27,38,0.12)',
-        lift: '0 12px 32px -12px rgba(108,92,231,0.35)',
+        card: '0 1px 2px rgba(42,26,21,0.05), 0 6px 18px -10px rgba(42,26,21,0.18)',
+        lift: '0 10px 24px -12px rgba(138,38,32,0.45)',
+        pop: '0 18px 48px -16px rgba(42,26,21,0.35)',
       },
       borderRadius: { '4xl': '2rem' },
     },

@@ -1,44 +1,35 @@
 import { useLocation2 } from '../lib/location.jsx';
+import { Mascot } from './Brand.jsx';
 import { PinIcon } from './icons.jsx';
 
-/** Asks for location before showing anything: customers only see shops within walking range. */
+/** Customers only see shops within walking range, so ask where they are first. */
 export default function LocationGate({ children }) {
-  const { loc, locate, useDemo, status, error } = useLocation2();
+  const { loc, setPickerOpen } = useLocation2();
   if (loc) return children;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="card relative overflow-hidden p-8 sm:p-12">
-        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-100 blur-2xl" aria-hidden="true" />
-        <div className="absolute -bottom-20 right-24 h-48 w-48 rounded-full bg-mint-100 blur-2xl" aria-hidden="true" />
-        <div className="relative max-w-xl">
-          <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-600">
-            <PinIcon className="h-4 w-4" /> Within 750 m of you
-          </span>
-          <h1 className="mt-4 text-3xl font-extrabold leading-tight sm:text-5xl">
-            Fresh milk, bread and snacks from the shop <span className="text-brand-500">around the corner.</span>
-          </h1>
-          <p className="mt-4 text-ink-soft">
-            See what your local stores have on the shelf right now. Freeze it for 30 minutes, walk over, and pay at the counter.
+    <main className="mx-auto max-w-6xl px-4 py-8">
+      <section className="relative grid overflow-hidden rounded-2xl bg-saffron-400 sm:grid-cols-[1.4fr_1fr]">
+        <div className="p-8 sm:p-12">
+          <p className="text-xs font-bold uppercase tracking-wider text-maroon-700">Your neighbourhood, online</p>
+          <h1 className="mt-3 text-3xl font-extrabold leading-tight text-maroon-600 sm:text-5xl">Ghar ki zarooratein.<br />Bas, Dailykart se.</h1>
+          <p className="mt-4 max-w-md text-ink/80">
+            See what the shops around you have on the shelf right now. Reserve it, walk over, and pay at the counter.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={locate} disabled={status === 'locating'} className="btn-primary">
-              <PinIcon className="h-4 w-4" />
-              {status === 'locating' ? 'Finding you…' : 'Use my location'}
-            </button>
-            <button onClick={useDemo} className="btn-ghost">Try the demo area</button>
-          </div>
-          {status === 'error' && <p className="mt-4 text-sm text-red-600">{error}</p>}
-          <dl className="mt-10 grid grid-cols-3 gap-4 text-center sm:max-w-md">
-            {[['1', 'Find nearby'], ['2', 'Freeze items'], ['3', 'Pay in store']].map(([n, t]) => (
-              <div key={n} className="rounded-2xl bg-canvas p-3">
-                <dt className="text-lg font-extrabold text-brand-500">{n}</dt>
-                <dd className="text-xs font-medium text-ink-soft">{t}</dd>
+          <button onClick={() => setPickerOpen(true)} className="btn-primary mt-8">
+            <PinIcon className="h-4 w-4" /> Set my location
+          </button>
+          <div className="mt-10 grid max-w-md grid-cols-3 gap-3 text-center">
+            {[['1', 'Find nearby'], ['2', 'Reserve items'], ['3', 'Pay in store']].map(([n, t]) => (
+              <div key={n} className="rounded-xl bg-white/60 p-3">
+                <p className="text-lg font-extrabold text-maroon-600">{n}</p>
+                <p className="text-xs font-semibold">{t}</p>
               </div>
             ))}
-          </dl>
+          </div>
         </div>
-      </div>
+        <div className="dots hidden items-end justify-center sm:flex"><Mascot className="h-80" /></div>
+      </section>
     </main>
   );
 }

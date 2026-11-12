@@ -63,6 +63,11 @@ function cleanProduct(body, partial = false) {
     out.expires_on = body.expires_on ? String(body.expires_on).slice(0, 10) : null;
   }
   if (body.active !== undefined) out.active = Boolean(body.active);
+  if (body.image_id !== undefined) {
+    const id = body.image_id === null || body.image_id === '' ? null : Number(body.image_id);
+    if (id !== null && !Number.isInteger(id)) throw new HttpError(400, 'Invalid photo');
+    out.image_id = id;
+  }
   if (!partial) {
     for (const k of ['name', 'category', 'price', 'stock']) {
       if (out[k] === undefined || out[k] === '') throw new HttpError(400, `${k} is required`);
@@ -70,6 +75,15 @@ function cleanProduct(body, partial = false) {
   }
   return out;
 }
+
+/** A photo can only be attached to a product of the shop that uploaded it. */
+async function checkImage(imageId, shopId) {
+  if (imageId == null) return;
+  const { rowCount } = await query(`SELECT 1 FROM product_images WHERE id = $1 AND shop_id = $2`, [imageId, shopId]);
+  if (!rowCount) throw new HttpError(400, 'That photo does not belong to your shop');
+}
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 async function myShop(userId) {
   const { rows: [shop] } = await query(`SELECT * FROM shops WHERE owner_id = $1`, [userId]);
@@ -96,6 +110,20 @@ r.get('/events', wrap(async (req, res) => {
     `SELECT id, topic, event_type, consumer, result, payload, processed_at FROM event_log ORDER BY id DESC LIMIT 25`
   );
   res.json(rows);
+}));
+
+/** Public product photo. Images never change once uploaded, so cache them hard. */
+r.get('/images/:id', wrap(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) throw new HttpError(404, 'Not found');
+  const { rows: [img] } = await query(`SELECT mime, data FROM product_images WHERE id = $1`, [id]);
+  if (!img) throw new HttpError(404, 'Not found');
+  res.set({
+    'Content-Type': img.mime,
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  res.send(img.data);
 }));
 
 // ---------- auth ----------
@@ -170,7 +198,7 @@ r.get('/shops/:id', wrap(async (req, res) => {
   if (!shop) throw new HttpError(404, 'Shop not found');
   if (shop.distance_m > config.radius.max) throw new HttpError(403, `This shop is ${(shop.distance_m / 1000).toFixed(1)} km away, outside your ${config.radius.max} m walking range`);
   const { rows: products } = await query(
-    `SELECT id, name, brand, category, unit, price, stock, expires_on FROM products
+    `SELECT id, name, brand, category, unit, price, stock, expires_on, image_id FROM products
      WHERE shop_id = $1 AND active ORDER BY category, (stock = 0), name`,
     [shop.id]
   );
@@ -241,10 +269,11 @@ r.get('/shop/me', shopOnly, wrap(async (req, res) => {
 r.post('/shop/products', shopOnly, wrap(async (req, res) => {
   const shop = await myShop(req.user.id);
   const p = cleanProduct(req.body || {});
+  await checkImage(p.image_id, shop.id);
   const { rows: [created] } = await query(
-    `INSERT INTO products (shop_id, name, brand, category, unit, price, stock, expires_on)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [shop.id, p.name, p.brand || null, p.category, p.unit || '1 pc', p.price, p.stock, p.expires_on || null]
+    `INSERT INTO products (shop_id, name, brand, category, unit, price, stock, expires_on, image_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [shop.id, p.name, p.brand || null, p.category, p.unit || '1 pc', p.price, p.stock, p.expires_on || null, p.image_id ?? null]
   );
   await publish(TOPICS.inventory, 'inventory.changed', { reason: 'product.added', productIds: [created.id] }, shop.id);
   res.status(201).json(created);
@@ -253,6 +282,7 @@ r.post('/shop/products', shopOnly, wrap(async (req, res) => {
 r.patch('/shop/products/:id', shopOnly, wrap(async (req, res) => {
   const shop = await myShop(req.user.id);
   const p = cleanProduct(req.body || {}, true);
+  await checkImage(p.image_id, shop.id);
   const keys = Object.keys(p);
   if (!keys.length) throw new HttpError(400, 'Nothing to update');
   const sets = keys.map((k, i) => `${k} = $${i + 3}`).join(', ');
@@ -294,6 +324,26 @@ r.delete('/shop/products/:id', shopOnly, wrap(async (req, res) => {
   if (!rowCount) throw new HttpError(404, 'Product not found');
   await publish(TOPICS.inventory, 'inventory.changed', { reason: 'product.removed', productIds: [id] }, shop.id);
   res.json({ ok: true, hidden: Boolean(busy) });
+}));
+
+/** Upload a product photo: { data: "data:image/webp;base64,..." } (already shrunk in the browser). */
+r.post('/shop/images', shopOnly, wrap(async (req, res) => {
+  const shop = await myShop(req.user.id);
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(req.body?.data || '');
+  if (!m || !IMAGE_TYPES.includes(m[1])) throw new HttpError(400, 'Upload a JPG, PNG or WebP photo');
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > 700 * 1024) throw new HttpError(413, 'Photo is too large, please use a smaller one');
+  // Check the file really is the image type it claims to be (magic bytes).
+  const ok =
+    (m[1] === 'image/jpeg' && buf[0] === 0xff && buf[1] === 0xd8) ||
+    (m[1] === 'image/png' && buf.subarray(0, 4).toString('hex') === '89504e47') ||
+    (m[1] === 'image/webp' && buf.subarray(0, 4).toString() === 'RIFF' && buf.subarray(8, 12).toString() === 'WEBP');
+  if (!ok) throw new HttpError(400, "That file isn't a valid image");
+  const { rows: [img] } = await query(
+    `INSERT INTO product_images (shop_id, mime, data) VALUES ($1, $2, $3) RETURNING id`,
+    [shop.id, m[1], buf]
+  );
+  res.status(201).json({ id: img.id });
 }));
 
 r.get('/shop/freezes', shopOnly, wrap(async (req, res) => {
